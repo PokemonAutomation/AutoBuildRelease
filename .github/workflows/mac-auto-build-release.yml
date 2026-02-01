@@ -52,13 +52,29 @@ jobs:
           ref: ${{ github.event.inputs.branch }}
           path: Arduino-Source
 
+      - name: Checkout onnxruntime
+        uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+          repository: 'microsoft/onnxruntime'
+          ref: 'v1.23.2'
+          path: onnxruntime
+
+      - name: Compile onnxruntime with CoreML
+        run: |
+          cd onnxruntime
+          git submodule update --init --recursive
+          # v1.23.2 does not contain commit 1411308263e4d31da8773ef1859dd9ee1af9948f which fixes a build issue with the Clang on the MacOS Intel runner. Waive false positive warning
+          ./build.sh --config Release --build_shared_lib --parallel --use_coreml --skip_tests --cmake_extra_defines CMAKE_OSX_ARCHITECTURES=${{ matrix.arch }} CMAKE_POLICY_VERSION_MINIMUM=3.5 CMAKE_CXX_FLAGS="-Wno-array-bounds"
+          cd ..
+
       # MacOS runners have Homebrew, Xcode, and Cmake already installed
       - name: Install Dependencies
         run: | 
           brew install tesseract
           brew install tesseract-lang
           brew install opencv
-          brew install onnxruntime
+          # brew install onnxruntime
       - uses: jurplel/install-qt-action@v4
         with:
           version: ${{ github.event.inputs.qt_version }}
@@ -92,7 +108,7 @@ jobs:
           cp $BREW_PREFIX/opt/gcc/lib/gcc/current/libgcc_s.1.1.dylib SerialPrograms.app/Contents/Frameworks
           cp $BREW_PREFIX/opt/protobuf/lib/libutf8_validity.dylib SerialPrograms.app/Contents/Frameworks
           cp $BREW_PREFIX/opt/webp/lib/libsharpyuv.0.dylib SerialPrograms.app/Contents/Frameworks
-          cp $BREW_PREFIX/opt/jpeg-xl/lib/libjxl_cms.0.11.dylib SerialPrograms.app/Contents/Frameworks
+          # cp $BREW_PREFIX/opt/jpeg-xl/lib/libjxl_cms.0.11.dylib SerialPrograms.app/Contents/Frameworks
           cp $BREW_PREFIX/opt/vtk/lib/libvtkCommonComputationalGeometry-*.dylib SerialPrograms.app/Contents/Frameworks
           cp $BREW_PREFIX/opt/vtk/lib/libvtkFiltersVerdict-*.dylib SerialPrograms.app/Contents/Frameworks
           cp $BREW_PREFIX/opt/vtk/lib/libvtkfmt-*.dylib SerialPrograms.app/Contents/Frameworks
